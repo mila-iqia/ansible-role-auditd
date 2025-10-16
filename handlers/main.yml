@@ -22,3 +22,15 @@
     use: service  # systemctl can't restart auditd, service can: https://access.redhat.com/solutions/2664811
   when:
     - auditd_start_service
+
+- name: Restart systemd-journald
+  ansible.builtin.systemd_service:
+    name: systemd-journald
+    state: restarted
+    daemon_reload: true
+
+- name: Restart systemd-journald@audit
+  ansible.builtin.systemd_service:
+    name: systemd-journald@audit
+    state: restarted
+    daemon_reload: true
