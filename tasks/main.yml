@@ -83,7 +83,7 @@
     - name: Prepare the override file
       ansible.builtin.command:
         cmd: systemctl cat auditd.service > /etc/systemd/system/auditd.service
-      when: auditd_service_override.stat is not defined
+      when: auditd_service_override.stat.exists is false
 
     - name: Configure the Logging Context
       community.general.ini_file:
