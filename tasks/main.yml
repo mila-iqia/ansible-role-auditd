@@ -65,7 +65,7 @@
         src: journald@audit.conf.j2
         dest: /etc/systemd/journald.conf.d/journald@audit.conf
         mode: "0644"
-      notify: 
+      notify:
         - Restart systemd-journald
         - Restart systemd-journald@audit
 
@@ -82,8 +82,15 @@
 
     - name: Prepare the override file
       ansible.builtin.command:
-        cmd: systemctl cat auditd.service > /etc/systemd/system/auditd.service
+        cmd: systemctl cat auditd.service
       when: auditd_service_override.stat.exists is false
+      register: cat_auditd_service
+
+    - name: Copy using inline content
+      ansible.builtin.copy:
+        content: "{{ cat_auditd_service.stdout }}"
+        dest: /etc/systemd/system/auditd.service
+      when: cat_auditd_service
 
     - name: Configure the Logging Context
       community.general.ini_file:
@@ -106,3 +113,12 @@
     enabled: true
   when:
     - auditd_start_service
+
+- name: Start and enable systemd-journald@audit
+  ansible.builtin.service:
+    name: "systemd-journald@audit"
+    state: started
+    enabled: true
+  when:
+    - auditd_start_service
+    - auditd_journal_context is true
