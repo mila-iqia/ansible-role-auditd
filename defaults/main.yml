@@ -36,6 +36,7 @@ auditd_tcp_client_max_idle: 0
 auditd_enable_krb5: "no"
 auditd_krb5_principal: auditd
 auditd_distribute_network: "no"
+auditd_journal_context: false
 
 # You can opt to manage the rules with this role or not.
 # Setting auditd_manage_rules to false will not manage the rules.

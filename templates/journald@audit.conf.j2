@@ -1,0 +1,7 @@
+[Journal]
+# These Settings keep auditd from spilling overflow messages into the console. The default
+# values can be foudn in /etc/systemd/journald.conf
+Storage=volatile
+RuntimeMaxUse=100M
+ForwardToSyslog=no
+ForwardToWall=no

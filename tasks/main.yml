@@ -51,6 +51,54 @@
   loop: "{{ auditd_plugin_syslog | dict2items }}"
   when: auditd_plugin_syslog is defined
 
+- name: Create a Seperate Journald Context for auditd
+  when: auditd_journal_context is true
+  block:
+    - name: Create journald drop-in directory
+      ansible.builtin.file:
+        name: /etc/systemd/journald.conf.d/
+        state: directory
+        mode: "0755"
+
+    - name: Create auditd Journal Context
+      ansible.builtin.template:
+        src: journald@audit.conf.j2
+        dest: /etc/systemd/journald.conf.d/journald@audit.conf
+        mode: "0644"
+      notify: 
+        - Restart systemd-journald
+        - Restart systemd-journald@audit
+
+    - name: Restart Journald to Activate the New Context
+      ansible.builtin.meta: flush_handlers
+
+- name: Configure auditd to use this new context
+  when: auditd_journal_context is true
+  block:
+    - name: Check whether override file exists
+      ansible.builtin.stat:
+        path: /etc/systemd/system/auditd.service
+      register: auditd_service_override
+
+    - name: Prepare the override file
+      ansible.builtin.command:
+        cmd: systemctl cat auditd.service > /etc/systemd/system/auditd.service
+      when: auditd_service_override.stat is not defined
+
+    - name: Configure the Logging Context
+      community.general.ini_file:
+        path: /etc/systemd/system/auditd.service
+        section: Service
+        option: LogNamespace
+        value: audit
+        mode: "0644"
+      notify:
+        - Restart auditd
+        - Restart systemd-journald
+
+    - name: Restart Auditd to Activate the New Context
+      ansible.builtin.meta: flush_handlers
+
 - name: Start and enable auditd
   ansible.builtin.service:
     name: "{{ auditd_service }}"
