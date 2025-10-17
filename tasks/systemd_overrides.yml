@@ -1,0 +1,19 @@
+---
+- name: systemd_overrides | Check whether override file exists
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ item }}"
+  register: service_override
+
+- name: systemd_overrides | Prepare the override file
+  ansible.builtin.command:
+    cmd: "systemctl cat {{ item }}"
+    creates: "/etc/systemd/system/{{ item }}"
+  when: service_override.stat.exists is false
+  register: cat_service
+
+- name: systemd_overrides | Copy using inline content
+  ansible.builtin.copy:
+    content: "{{ cat_service.stdout }}"
+    mode: "0644"
+    dest: "/etc/systemd/system/{{ item }}"
+  when: service_override.stat.exists is false

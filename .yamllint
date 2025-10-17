@@ -2,6 +2,7 @@
 extends: default
 
 rules:
+  command-instead-of-module: false
   braces:
     max-spaces-inside: 1
     level: error
