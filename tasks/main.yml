@@ -54,50 +54,112 @@
 - name: Create a Seperate Journald Context for auditd
   when: auditd_journal_context is true
   block:
-    - name: Create journald drop-in directory
-      ansible.builtin.file:
-        name: /etc/systemd/journald.conf.d/
-        state: directory
-        mode: "0755"
-
     - name: Create auditd Journal Context
       ansible.builtin.template:
         src: journald@audit.conf.j2
-        dest: /etc/systemd/journald.conf.d/journald@audit.conf
+        dest: /etc/systemd/journald@audit.conf
         mode: "0644"
-      notify: 
+      notify:
         - Restart systemd-journald
-        - Restart systemd-journald@audit
 
     - name: Restart Journald to Activate the New Context
       ansible.builtin.meta: flush_handlers
 
-- name: Configure auditd to use this new context
+- name: Configure systemd overrides
   when: auditd_journal_context is true
-  block:
-    - name: Check whether override file exists
-      ansible.builtin.stat:
-        path: /etc/systemd/system/auditd.service
-      register: auditd_service_override
+  ansible.builtin.include_tasks:
+    file: systemd_overrides.yml
+  loop:
+    - auditd.service
+    - systemd-journald-audit.socket
+    - systemd-journald@audit.service
+    - systemd-journald.service
 
-    - name: Prepare the override file
-      ansible.builtin.command:
-        cmd: systemctl cat auditd.service > /etc/systemd/system/auditd.service
-      when: auditd_service_override.stat.exists is false
+- name: Remove the systemd-journald-auditd.socket from systemd-journald.service
+  community.general.ini_file:
+    path: /etc/systemd/system/systemd-journald.service
+    section: Service
+    option: Sockets
+    value: "journald.socket systemd-journald-dev-log.socket"
+    mode: "0644"
+    exclusive: true
+    state: present
+    no_extra_spaces: true
+  notify:
+    - Restart systemd-journald
 
-    - name: Configure the Logging Context
-      community.general.ini_file:
-        path: /etc/systemd/system/auditd.service
-        section: Service
-        option: LogNamespace
-        value: audit
-        mode: "0644"
-      notify:
-        - Restart auditd
-        - Restart systemd-journald
+- name: Add systemd-journald@audit.service to systemd-journald-audit.socket
+  community.general.ini_file:
+    path: /etc/systemd/system/systemd-journald-audit.socket
+    section: Socket
+    option: Service
+    value: systemd-journald@audit.service
+    mode: "0644"
+    exclusive: true
+    state: present
+    no_extra_spaces: true
+  notify:
+    - Restart systemd-journald-audit.socket
+    - Restart systemd-journald@audit.service
 
-    - name: Restart Auditd to Activate the New Context
-      ansible.builtin.meta: flush_handlers
+- name: Add systemd-journald-audit.socket to systemd-journald@audit.service
+  community.general.ini_file:
+    path: /etc/systemd/system/systemd-journald@audit.service
+    section: Service
+    option: Sockets
+    value: "systemd-journald@%i.socket systemd-journald-audit.socket"
+    mode: "0644"
+    exclusive: true
+    no_extra_spaces: true
+  notify:
+    - Restart systemd-journald@audit.service
+
+- name: Add systemd-journald-audit.socket to systemd-journald@audit.service Requires
+  community.general.ini_file:
+    path: /etc/systemd/system/systemd-journald@audit.service
+    section: Unit
+    option: Requires
+    value: "systemd-journald@%i.socket systemd-journald-varlink@%i.socket systemd-journald-audit.socket"
+    mode: "0644"
+    exclusive: true
+    no_extra_spaces: true
+  notify:
+    - Restart systemd-journald@audit.service
+
+- name: Add systemd-journald-audit.socket to systemd-journald@audit.service After
+  community.general.ini_file:
+    path: /etc/systemd/system/systemd-journald@audit.service
+    section: Unit
+    option: After
+    value: "systemd-journald@%i.socket systemd-journald-varlink@%i.socket systemd-journald-audit.socket"
+    mode: "0644"
+    exclusive: true
+    no_extra_spaces: true
+  notify:
+    - Restart systemd-journald@audit.service
+
+- name: Configure the Logging Context
+  community.general.ini_file:
+    path: /etc/systemd/system/auditd.service
+    section: Service
+    option: LogNamespace
+    value: audit
+    mode: "0644"
+    no_extra_spaces: true
+  notify:
+    - Restart auditd
+
+- name: Restart any services that were notified
+  ansible.builtin.meta: flush_handlers
+
+- name: Start and enable systemd-journald@audit
+  ansible.builtin.service:
+    name: "systemd-journald@audit"
+    state: started
+    enabled: true
+  when:
+    - auditd_start_service
+    - auditd_journal_context is true
 
 - name: Start and enable auditd
   ansible.builtin.service:

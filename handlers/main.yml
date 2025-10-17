@@ -19,7 +19,6 @@
   ansible.builtin.service:
     name: "{{ auditd_service }}"
     state: restarted
-    use: service  # systemctl can't restart auditd, service can: https://access.redhat.com/solutions/2664811
   when:
     - auditd_start_service
 
@@ -29,8 +28,14 @@
     state: restarted
     daemon_reload: true
 
-- name: Restart systemd-journald@audit
+- name: Restart systemd-journald@audit.service
   ansible.builtin.systemd_service:
-    name: systemd-journald@audit
+    name: systemd-journald@audit.service
+    state: restarted
+    daemon_reload: true
+
+- name: Restart systemd-journald-audit.socket
+  ansible.builtin.systemd_service:
+    name: systemd-journald-audit.socket
     state: restarted
     daemon_reload: true
