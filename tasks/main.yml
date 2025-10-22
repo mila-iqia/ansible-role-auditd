@@ -76,6 +76,7 @@
     - systemd-journald.service
 
 - name: Remove the systemd-journald-auditd.socket from systemd-journald.service
+  when: auditd_journal_context is true
   community.general.ini_file:
     path: /etc/systemd/system/systemd-journald.service
     section: Service
@@ -89,6 +90,7 @@
     - Restart systemd-journald
 
 - name: Add systemd-journald@audit.service to systemd-journald-audit.socket
+  when: auditd_journal_context is true
   community.general.ini_file:
     path: /etc/systemd/system/systemd-journald-audit.socket
     section: Socket
@@ -103,6 +105,7 @@
     - Restart systemd-journald@audit.service
 
 - name: Add systemd-journald-audit.socket to systemd-journald@audit.service
+  when: auditd_journal_context is true
   community.general.ini_file:
     path: /etc/systemd/system/systemd-journald@audit.service
     section: Service
@@ -115,6 +118,7 @@
     - Restart systemd-journald@audit.service
 
 - name: Add systemd-journald-audit.socket to systemd-journald@audit.service Requires
+  when: auditd_journal_context is true
   community.general.ini_file:
     path: /etc/systemd/system/systemd-journald@audit.service
     section: Unit
@@ -127,6 +131,7 @@
     - Restart systemd-journald@audit.service
 
 - name: Add systemd-journald-audit.socket to systemd-journald@audit.service After
+  when: auditd_journal_context is true
   community.general.ini_file:
     path: /etc/systemd/system/systemd-journald@audit.service
     section: Unit
@@ -139,6 +144,7 @@
     - Restart systemd-journald@audit.service
 
 - name: Configure the Logging Context
+  when: auditd_journal_context is true
   community.general.ini_file:
     path: /etc/systemd/system/auditd.service
     section: Service
